@@ -11,7 +11,7 @@ import numpy as np
 from flask import Flask, Response, jsonify, send_from_directory
 
 from action_detection.yolo26_pose import Ultralytics_YOLO_Pose_Bayese_YUV420SP
-from astraCamera.astraCamera import AstraCamera
+from astra_camera.astra_camera import Astra_Camera
 from object_detection.yolo26_det import (
     Ultralytics_YOLO_Detect_Bayese_YUV420SP,
     coco_names,
@@ -34,7 +34,7 @@ class RuntimeConfig:
 class InferenceRuntime:
     def __init__(self, config: RuntimeConfig):
         self.config = config
-        self.camera = AstraCamera()
+        self.camera = Astra_Camera()
         self.detector = None
         self.pose_detector = None
 

@@ -44,7 +44,7 @@ class AstraImageMetadata(ctypes.Structure):
         ("reserved", ctypes.c_uint32)
     ]
 
-class AstraCamera:
+class Astra_Camera:
     """Astra Pro camera wrapper - RGB + Depth"""
     def __init__(self):
         self.sensor = astra_streamsetconnection_t()
