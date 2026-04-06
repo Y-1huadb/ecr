@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Astra + YOLO26 实时可视化</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #12141a;
+            --panel: #1d2230;
+            --text: #dbe1ee;
+            --muted: #9ca8bf;
+            --accent: #47b8ff;
+            --ok: #1fcc95;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: radial-gradient(circle at 20% 20%, #1a2238, var(--bg));
+            color: var(--text);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 16px;
+        }
+
+        .title {
+            margin: 0 0 16px;
+            font-size: 24px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+        }
+
+        .panel {
+            background: rgba(29, 34, 48, 0.85);
+            border: 1px solid #2a3144;
+            border-radius: 12px;
+            padding: 12px;
+            backdrop-filter: blur(6px);
+        }
+
+        #stream {
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid #3a435a;
+            display: block;
+            background: #000;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(71, 184, 255, 0.15);
+            border: 1px solid rgba(71, 184, 255, 0.45);
+            color: var(--accent);
+            font-size: 13px;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .section-title {
+            margin: 0 0 8px;
+            font-size: 16px;
+        }
+
+        .list {
+            margin: 0;
+            padding-left: 18px;
+            max-height: 300px;
+            overflow: auto;
+        }
+
+        .list li {
+            margin: 6px 0;
+            line-height: 1.35;
+        }
+
+        .ok {
+            color: var(--ok);
+        }
+
+        @media (max-width: 960px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="title">AstraCamera + YOLO26 Det/Pose</h1>
+        <div class="layout">
+            <div class="panel">
+                <img id="stream" src="/video_feed" alt="实时视频流" />
+                <p class="muted">视频流由后端实时推理后输出（已叠加检测框和关键点）。</p>
+            </div>
+
+            <div class="panel">
+                <p><span class="badge" id="status">连接中...</span></p>
+                <p class="muted" id="fps">FPS: --</p>
+
+                <h3 class="section-title">检测结果</h3>
+                <ul id="det-list" class="list"></ul>
+
+                <h3 class="section-title">姿态结果</h3>
+                <ul id="pose-list" class="list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById("status");
+        const fpsEl = document.getElementById("fps");
+        const detListEl = document.getElementById("det-list");
+        const poseListEl = document.getElementById("pose-list");
+
+        function renderDetections(detections) {
+            detListEl.innerHTML = "";
+            if (!detections.length) {
+                detListEl.innerHTML = "<li class='muted'>暂无目标</li>";
+                return;
+            }
+            detections.forEach((item) => {
+                const li = document.createElement("li");
+                li.textContent = `${item.label} | score=${item.score.toFixed(2)} | bbox=[${item.bbox.join(", ")}]`;
+                detListEl.appendChild(li);
+            });
+        }
+
+        function renderPoses(poses) {
+            poseListEl.innerHTML = "";
+            if (!poses.length) {
+                poseListEl.innerHTML = "<li class='muted'>暂无人体姿态</li>";
+                return;
+            }
+            poses.forEach((item, idx) => {
+                const li = document.createElement("li");
+                li.textContent = `person-${idx + 1} | score=${item.score.toFixed(2)} | kpts=${item.keypoints.length}`;
+                poseListEl.appendChild(li);
+            });
+        }
+
+        async function poll() {
+            try {
+                const resp = await fetch("/api/latest", { cache: "no-store" });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+
+                statusEl.textContent = "在线";
+                statusEl.classList.add("ok");
+                fpsEl.textContent = `FPS: ${data.fps ?? "--"}`;
+                renderDetections(data.detections || []);
+                renderPoses(data.poses || []);
+            } catch (err) {
+                statusEl.textContent = "连接失败";
+                statusEl.classList.remove("ok");
+                fpsEl.textContent = "FPS: --";
+            }
+        }
+
+        setInterval(poll, 400);
+        poll();
+    </script>
+</body>
+
+</html>
