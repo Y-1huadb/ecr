@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import os
-import sys
 from pathlib import Path
 
 import cv2
@@ -9,16 +8,9 @@ import numpy as np
 import torch
 
 
-def ensure_repo_on_path(repo_root: str):
-    repo_root = os.path.abspath(repo_root)
-    if repo_root not in sys.path:
-        sys.path.insert(0, repo_root)
-    return repo_root
 
-
-def load_model(repo_root: str, weights_path: str, device: str = 'cpu', num_class: int = 400):
-    ensure_repo_on_path(repo_root)
-    from net.st_gcn import Model
+def load_model(weights_path: str, device: str = 'cpu', num_class: int = 400):
+    from stgcn.st_gcn import Model
 
     model = Model(
         in_channels=3,
@@ -241,12 +233,11 @@ def overlay_video(input_video, output_video, frame_lookup, track_best, show_top1
 
 def main():
     ap = argparse.ArgumentParser(description='Overlay ST-GCN action labels onto tracked pose video')
-    ap.add_argument('--repo-root', required=True, help='Path to cloned yysijie/st-gcn repo root')
-    ap.add_argument('--track-npz', required=True, help='Path to per-track npz from yolo26_pose_track_npz.py')
-    ap.add_argument('--weights', required=True, help='Path to st_gcn.kinetics.pt or your own trained weights')
-    ap.add_argument('--input-video', required=True, help='Source mp4 to draw action labels on')
-    ap.add_argument('--output-video', required=True, help='Output mp4 with overlaid action labels')
-    ap.add_argument('--label-path', default='', help='Optional label txt. Default: repo_root/resource/kinetics_skeleton/label_name.txt')
+    ap.add_argument('--track-npz', default='/home/sunrise/Desktop/data/pose.npz', help='Path to per-track npz from yolo26_pose_track_npz.py')
+    ap.add_argument('--weights', default='/home/sunrise/Desktop/ECR/models/st_gcn.kinetics.pt', help='Path to st_gcn.kinetics.pt or your own trained weights')
+    ap.add_argument('--input-video', default='/home/sunrise/Desktop/data/-_pn5NxJmok_000004_000014.mp4', help='Source mp4 to draw action labels on')
+    ap.add_argument('--output-video', default='/home/sunrise/Desktop/data/stgcn-result.mp4', help='Output mp4 with overlaid action labels')
+    ap.add_argument('--label-path', default='/home/sunrise/Desktop/ECR/action_detection/stgcn/label_name.txt', help='Optional label txt. Default: ./stgcn/label_name.txt')
     ap.add_argument('--device', default='cpu', help='cpu or cuda:0')
     ap.add_argument('--window-size', type=int, default=128)
     ap.add_argument('--stride', type=int, default=32)
@@ -254,8 +245,7 @@ def main():
     ap.add_argument('--prediction-mode', choices=['whole_track', 'window_avg'], default='window_avg')
     args = ap.parse_args()
 
-    repo_root = ensure_repo_on_path(args.repo_root)
-    label_path = args.label_path or os.path.join(repo_root, 'resource', 'kinetics_skeleton', 'label_name.txt')
+    label_path = args.label_path or os.path.join('.', 'stgcn', 'label_name.txt')
     labels = load_labels(label_path)
 
     data = np.load(args.track_npz, allow_pickle=True)
@@ -263,7 +253,7 @@ def main():
     height = int(data['height'])
     track_ids = [int(x) for x in data['track_ids']]
 
-    model, missing, unexpected = load_model(repo_root, args.weights, args.device, num_class=len(labels))
+    model, missing, unexpected = load_model(args.weights, args.device, num_class=len(labels))
     if missing:
         print(f'[warn] missing keys: {len(missing)}')
     if unexpected:
