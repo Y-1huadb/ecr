@@ -55,12 +55,29 @@ class ConvTemporalGraphical(nn.Module):
             bias=bias)
 
     def forward(self, x, A):
+        """
+        x: [N, C_in, T, V]
+        A: [K, V, V]
+        return: [N, C_out, T, V], A
+        """
         assert A.size(0) == self.kernel_size
 
-        x = self.conv(x)
+        A_org = A
+        x = self.conv(x)  # [N, C_out*K, T, V]
 
         n, kc, t, v = x.size()
-        x = x.view(n, self.kernel_size, kc//self.kernel_size, t, v)
-        x = torch.einsum('nkctv,kvw->nctw', (x, A))
+        c = kc // self.kernel_size
 
-        return x.contiguous(), A
+        # [N, K, C, T, V]
+        x = x.view(n, self.kernel_size, c, t, v)
+
+        # 把 (K, V) 展平后与 A_flat 做 matmul
+        # 等价于 einsum('nkctv,kvw->nctw')
+        x = x.permute(0, 2, 3, 1, 4).contiguous()   # [N, C, T, K, V]
+        x = x.view(n, c, t, self.kernel_size * v)   # [N, C, T, K*V]
+
+        A_flat = A_org.contiguous().view(self.kernel_size * v, v)  # [K*V, V]
+
+        x = torch.matmul(x, A_flat)  # [N, C, T, V]
+
+        return x.contiguous(), A_org

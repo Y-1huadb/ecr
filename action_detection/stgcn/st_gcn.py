@@ -69,6 +69,7 @@ class Model(nn.Module):
 
         # data normalization
         N, C, T, V, M = x.size()
+        print( N, C, T, V, M )
         x = x.permute(0, 4, 3, 1, 2).contiguous()
         x = x.view(N * M, V * C, T)
         x = self.data_bn(x)

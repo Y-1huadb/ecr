@@ -99,7 +99,7 @@ def temporal_sample(seq: np.ndarray, out_len: int) -> np.ndarray:
     return out
 
 
-def build_sample_from_track(track_kpts17: np.ndarray, width: int, height: int, window_size: int = 128):
+def build_sample_from_track(track_kpts17: np.ndarray, width: int, height: int, window_size: int = 32):
     op18 = coco17_to_openpose18(track_kpts17)
     norm = normalize_like_demo(op18, width, height)
     seq = temporal_sample(norm, window_size)
@@ -239,7 +239,7 @@ def main():
     ap.add_argument('--output-video', default='/home/sunrise/Desktop/data/stgcn-result.mp4', help='Output mp4 with overlaid action labels')
     ap.add_argument('--label-path', default='/home/sunrise/Desktop/ECR/action_detection/stgcn/label_name.txt', help='Optional label txt. Default: ./stgcn/label_name.txt')
     ap.add_argument('--device', default='cpu', help='cpu or cuda:0')
-    ap.add_argument('--window-size', type=int, default=128)
+    ap.add_argument('--window-size', type=int, default=32)
     ap.add_argument('--stride', type=int, default=32)
     ap.add_argument('--topk', type=int, default=5)
     ap.add_argument('--prediction-mode', choices=['whole_track', 'window_avg'], default='window_avg')
